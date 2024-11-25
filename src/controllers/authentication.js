@@ -45,7 +45,7 @@ const registerUser = async (req, res) => {
             });
         }
 
-        const salt = randomBase64(16);
+        const salt = randomBase64();
 
         await createUser({
             username,
@@ -80,29 +80,31 @@ const loginUser = async (req,res) => {
             });
         }
 
-        const exitingUser = await getUserByEmail(email).select(
+        const existingUser = await getUserByEmail(email).select(
             "+authentication.password +authentication.salt",
         );
 
-        if (!exitingUser){
+        console.log(existingUser);
+
+        if (!existingUser){
             return res.status(400).json({
                 message : "User does not exist",
             });
         }
 
-        const expectedHash = hashToHex(existingUser.authentication.salt, password);
-        const isPassCorrect = expectedHash === existingUser.authentication.password;
+        const expectedHash = hashToHex(password,existingUser.authentication.salt );
+        const isPassValid = expectedHash === existingUser.authentication.password;
 
-        if(!isPassCorrect){
+        if(!isPassValid){
             return res.status(400).json({
                 message : "Invalid password",
             });
         }
 
-        const sessionSalt = randomBase64(16);
+        const sessionSalt = randomBase64();
         existingUser.authentication.sessionToken = hashToHex(
             sessionSalt,
-            exitingUser._id.toString(),
+            existingUser._id.toString(),
         );
 
         await existingUser.save();
